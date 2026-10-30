@@ -14,12 +14,12 @@ invoice_number, invoice_date, supplier_name, customer_name, subtotal, tax, disco
 line_items (list of objects with description, quantity, unit_price, amount), uncertain_fields (list of key names).
 
 Rules:
-- If a value is not clearly present, use null. Never guess. Never calculate a missing value.
+- If a value is not clearly present, use null. Never guess. Never calculate a missing value (the only exception is adding up several printed tax lines).
 - invoice_date as YYYY-MM-DD. If day and month are ambiguous, use null and add "invoice_date" to uncertain_fields.
 - Amounts are plain numbers: no currency symbol, no thousands separator.
 - currency is a 3-letter code (EUR, USD...) only if it is shown or clearly implied, else null.
 - invoice_number is ONLY a number labeled as an invoice number or invoice ID. A PO number, order number, account number or reference is NOT an invoice number. If there is no invoice number, use null.
-- tax is the total tax AMOUNT shown for the whole invoice, not a percentage and not a per-line value. If you cannot find one clearly shown tax amount, use null.
+- tax is the total tax AMOUNT for the whole invoice, not a percentage and not a per-line value. If the invoice shows several separate tax lines (for example GST and VAT), add up their printed amounts and add "tax" to uncertain_fields. Add up only tax lines from the totals section, never per-line tax columns. If no tax amount is shown in the totals section, use null.
 - discount is the total discount AMOUNT as a positive number, or null if none is shown.
 - supplier_name is who issues the invoice. customer_name is who is billed.
 - line_items has one entry per row. Use null for any missing part of a row.
