@@ -6,9 +6,11 @@ from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 from redis import Redis
 from rq import Queue
 from sqlalchemy import func, select
+from sqlalchemy.orm import selectinload
 
+from app.api_records import record_out
 from app.db import SessionLocal
-from app.models import Document, ProcessingEvent
+from app.models import Correction, Document, ProcessingEvent, Record
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -129,3 +131,79 @@ def get_document(doc_id: uuid.UUID):
             for e in sorted(d.events, key=lambda e: e.id)
         ]
         return out
+
+
+# ---------- results and reprocessing ----------
+
+RETRYABLE = {"queue_unavailable", "extraction_failed", "internal_error", "not_implemented_yet"}
+
+
+def _requeue(s, doc, reason):
+    doc.status = "queued"
+    doc.error_code = None
+    doc.error_message = None
+    doc.finished_at = None
+    s.add(ProcessingEvent(document_id=doc.id, event="reprocess_requested", detail={"reason": reason}))
+    try:
+        get_queue().enqueue("app.tasks.process_document", str(doc.id), job_timeout=3600)
+    except Exception:
+        doc.status = "failed"
+        doc.error_code = "queue_unavailable"
+        doc.error_message = "Could not queue the job. Try reprocessing later."
+    s.commit()
+
+
+@router.post("/reprocess-failed")
+def reprocess_failed():
+    with SessionLocal() as s:
+        docs = s.scalars(
+            select(Document).where(Document.status == "failed", Document.error_code.in_(RETRYABLE))
+        ).all()
+        for d in docs:
+            _requeue(s, d, "reprocess-failed")
+        return {"requeued": len(docs), "ids": [str(d.id) for d in docs]}
+
+
+@router.get("/{doc_id}/results")
+def get_results(
+    doc_id: uuid.UUID,
+    needs_review: bool | None = None,
+    limit: int = Query(200, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+):
+    with SessionLocal() as s:
+        d = s.get(Document, doc_id)
+        if not d:
+            raise HTTPException(404, "Document not found")
+        q = select(Record).where(Record.document_id == doc_id)
+        if needs_review is not None:
+            q = q.where(Record.needs_review.is_(needs_review))
+        total = s.scalar(select(func.count()).select_from(q.subquery()))
+        recs = s.scalars(
+            q.options(selectinload(Record.issues))
+            .order_by(Record.unit_start, Record.created_at).limit(limit).offset(offset)
+        ).all()
+        out = doc_summary(d)
+        out["total_records"] = total
+        out["records"] = [record_out(r) for r in recs]
+        return out
+
+
+@router.post("/{doc_id}/reprocess", status_code=202)
+def reprocess(doc_id: uuid.UUID, force: bool = False):
+    with SessionLocal() as s:
+        d = s.get(Document, doc_id)
+        if not d:
+            raise HTTPException(404, "Document not found")
+        if d.status in ("queued", "processing"):
+            raise HTTPException(409, "This document is already queued or processing.")
+        edits = s.scalar(
+            select(func.count()).select_from(Correction)
+            .join(Record, Record.id == Correction.record_id).where(Record.document_id == doc_id)
+        )
+        if edits and not force:
+            raise HTTPException(
+                409, f"This document has {edits} manual corrections that would be lost. Use ?force=true to reprocess anyway."
+            )
+        _requeue(s, d, "manual")
+        return doc_summary(d)
