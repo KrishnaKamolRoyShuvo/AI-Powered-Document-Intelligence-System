@@ -9,6 +9,7 @@ from app.db import SessionLocal
 from app.extractor import extract_invoice
 from app.models import Document, DocumentUnit, ProcessingEvent, Record, ValidationIssue
 from app.readers import ReadError, read_file, unit_image_bytes
+from app.validation import revalidate
 
 CONCURRENCY = int(os.environ.get("EXTRACT_CONCURRENCY", "3"))
 
@@ -144,6 +145,9 @@ def _process(doc_id):
                 s.commit()
 
         records = s.scalars(select(Record).where(Record.document_id == did)).all()
+        for r in records:
+            revalidate(s, r)
+        s.commit()
         failed = [r for r in records if not r.ai_data]
         if records and len(failed) == len(records):
             _fail(s, doc, "extraction_failed", "No page could be extracted. Try reprocessing.")
