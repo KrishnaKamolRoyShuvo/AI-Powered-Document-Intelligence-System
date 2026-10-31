@@ -30,6 +30,7 @@ services:
     volumes:
       - ./backend:/app
       - ./data:/data:ro
+      - uploads:/uploads
     depends_on:
       db:
         condition: service_healthy
@@ -38,3 +39,4 @@ services:
 
 volumes:
   pgdata:
+  uploads:

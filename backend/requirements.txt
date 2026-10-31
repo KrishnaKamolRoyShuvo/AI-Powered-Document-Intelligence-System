@@ -9,3 +9,6 @@ openpyxl==3.1.5
 xlrd==2.0.1
 sqlalchemy==2.0.36
 psycopg[binary]==3.2.3
+python-multipart==0.0.20
+redis==5.2.0
+rq==2.0.0
