@@ -37,6 +37,23 @@ services:
       redis:
         condition: service_started
 
+  worker:
+    build: ./backend
+    command: rq worker documents --url redis://redis:6379/0
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - ./backend:/app
+      - ./data:/data:ro
+      - uploads:/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
 volumes:
   pgdata:
   uploads:
