@@ -5,6 +5,7 @@ from sqlalchemy import text
 
 from app.api_documents import router as documents_router
 from app.api_records import router as records_router
+from app.api_search import router as search_router
 from app.db import SessionLocal, init_db
 
 
@@ -17,6 +18,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Document Intelligence API", lifespan=lifespan)
 app.include_router(documents_router)
 app.include_router(records_router)
+app.include_router(search_router)
 
 
 @app.get("/health")

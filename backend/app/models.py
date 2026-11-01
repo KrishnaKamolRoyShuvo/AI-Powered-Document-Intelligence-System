@@ -1,11 +1,13 @@
+import os
 import uuid
 from datetime import date, datetime
 
 from sqlalchemy import (
     BigInteger, Boolean, Date, DateTime, Float, ForeignKey, Integer,
-    Numeric, String, Text, UniqueConstraint, Uuid, func,
+    Computed, Index, Numeric, String, Text, UniqueConstraint, Uuid, func,
 )
-from sqlalchemy.dialects.postgresql import JSONB
+from pgvector.sqlalchemy import Vector
+from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -132,3 +134,20 @@ class ProcessingEvent(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     document: Mapped["Document"] = relationship(back_populates="events")
+
+
+class RecordSearch(Base):
+    """Search text, full-text vector and embedding for one record."""
+    __tablename__ = "record_search"
+    __table_args__ = (
+        Index("ix_record_search_tsv", "tsv", postgresql_using="gin"),
+        Index("ix_record_search_embedding", "embedding", postgresql_using="hnsw",
+              postgresql_ops={"embedding": "vector_cosine_ops"}),
+    )
+
+    record_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("records.id", ondelete="CASCADE"), primary_key=True)
+    search_text: Mapped[str] = mapped_column(Text, default="")
+    tsv: Mapped[str | None] = mapped_column(TSVECTOR, Computed("to_tsvector('simple', search_text)", persisted=True))
+    embedding = mapped_column(Vector(int(os.environ.get("EMBEDDING_DIM", "768"))), nullable=True)
+    embedding_model: Mapped[str | None] = mapped_column(String(80))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

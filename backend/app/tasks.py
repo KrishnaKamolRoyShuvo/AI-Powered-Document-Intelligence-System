@@ -10,6 +10,7 @@ from app.extractor import extract_invoice
 from app.models import Document, DocumentUnit, ProcessingEvent, Record, ValidationIssue
 from app.readers import ReadError, load_sheets, read_file, unit_image_bytes
 from app.sheet_mapper import extract_sheet
+from app.search import index_records
 from app.validation import revalidate
 
 CONCURRENCY = int(os.environ.get("EXTRACT_CONCURRENCY", "3"))
@@ -149,6 +150,7 @@ def _process(doc_id):
         for r in records:
             revalidate(s, r)
         s.commit()
+        _index(s, did, records)
         failed = [r for r in records if not r.ai_data]
         if records and len(failed) == len(records):
             _fail(s, doc, "extraction_failed", "No page could be extracted. Try reprocessing.")
@@ -249,7 +251,17 @@ def _process_sheets(s, doc, did):
     for r in records:
         revalidate(s, r)
     s.commit()
+    _index(s, did, records)
     doc.status = "needs_review" if any(r.needs_review for r in records) else "done"
     doc.finished_at = datetime.now(timezone.utc)
     _log(s, did, "finished", {"status": doc.status, "records": len(records)})
+    s.commit()
+
+
+def _index(s, did, records):
+    try:
+        _log(s, did, "indexed", index_records(s, records))
+    except Exception as e:
+        s.rollback()
+        _log(s, did, "index_failed", {"exception": type(e).__name__})
     s.commit()

@@ -9,6 +9,7 @@ from sqlalchemy import func, select
 from app.db import SessionLocal
 from app.models import Correction, Document, ProcessingEvent, Record
 from app.schemas import LineItem
+from app.search import index_records
 from app.validation import revalidate
 
 router = APIRouter(prefix="/records", tags=["records"])
@@ -143,6 +144,10 @@ def patch_record(record_id: uuid.UUID, body: RecordPatch):
                 if iss.code in ("read_failed", "extraction_failed"):
                     iss.resolved = True
             revalidate(s, rec)
+            try:
+                index_records(s, [rec])
+            except Exception:
+                pass
             refresh_document_status(s, s.get(Document, rec.document_id))
             s.commit()
         return record_out(rec, with_history=True)
