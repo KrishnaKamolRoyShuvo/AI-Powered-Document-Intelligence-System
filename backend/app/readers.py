@@ -195,7 +195,7 @@ def load_sheets(path):
             raise ReadError("corrupted", "Could not open the spreadsheet (damaged or password protected).") from e
     out = {}
     for name, df in frames.items():
-        out[str(name)] = df.dropna(how="all").dropna(axis=1, how="all").reset_index(drop=True)
+        out[str(name)] = df.dropna(how="all").dropna(axis=1, how="all")
     return out
 
 
