@@ -11,11 +11,11 @@ The OCR text can contain mistakes. If the image and the OCR text disagree, trust
 
 Return ONLY a JSON object with exactly these keys:
 invoice_number, invoice_date, supplier_name, customer_name, subtotal, tax, discount, total, currency,
-line_items (list of objects with description, quantity, unit_price, amount), uncertain_fields (list of key names).
+line_items (list of objects with description, quantity, unit_price, amount), uncertain_fields (list of key names), assumptions (list of short text notes).
 
 Rules:
 - If a value is not clearly present, use null. Never guess. Never calculate a missing value (the only exception is adding up several printed tax lines).
-- invoice_date as YYYY-MM-DD. If day and month are ambiguous, use null and add "invoice_date" to uncertain_fields.
+- invoice_date as YYYY-MM-DD. For a numeric date where day and month could be swapped (for example 02/01/2019), decide the order from clear cues on the document: another date on it with a day above 12, or the country, address, language or currency (Malaysia/MYR/RM, India, the UK, Australia and most of Europe write day first; the USA writes month first). If the cues make the order clear, use it and add a short note to assumptions, for example "date read as day-first because the receipt is Malaysian (MYR)". If there are no clear cues, use null and add "invoice_date" to uncertain_fields.
 - Amounts are plain numbers: no currency symbol, no thousands separator.
 - currency is a 3-letter code (EUR, USD...) only if it is shown or clearly implied, else null.
 - invoice_number is ONLY a number labeled as an invoice number or invoice ID. A PO number, order number, account number or reference is NOT an invoice number. If there is no invoice number, use null.

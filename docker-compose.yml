@@ -54,6 +54,20 @@ services:
       redis:
         condition: service_started
 
+  frontend:
+    build: ./frontend
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      WATCHPACK_POLLING: "true"
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend/app:/app/app
+      - ./frontend/lib:/app/lib
+      - ./frontend/components:/app/components
+    depends_on:
+      - backend
+
 volumes:
   pgdata:
   uploads:

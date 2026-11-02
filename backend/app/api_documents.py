@@ -2,7 +2,7 @@ import hashlib
 import os
 import uuid
 
-from fastapi import APIRouter, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, File, HTTPException, Query, Response, UploadFile
 from redis import Redis
 from rq import Queue
 from sqlalchemy import func, select
@@ -10,7 +10,8 @@ from sqlalchemy.orm import selectinload
 
 from app.api_records import record_out
 from app.db import SessionLocal
-from app.models import Correction, Document, ProcessingEvent, Record
+from app.models import Correction, Document, DocumentUnit, ProcessingEvent, Record
+from app.readers import unit_image_bytes
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -207,3 +208,35 @@ def reprocess(doc_id: uuid.UUID, force: bool = False):
             )
         _requeue(s, d, "manual")
         return doc_summary(d)
+
+
+# ---------- pages (text and image) ----------
+
+@router.get("/{doc_id}/units/{index}")
+def get_unit(doc_id: uuid.UUID, index: int):
+    with SessionLocal() as s:
+        u = s.scalar(select(DocumentUnit).where(DocumentUnit.document_id == doc_id, DocumentUnit.index == index))
+        if not u:
+            raise HTTPException(404, "Page not found")
+        return {
+            "index": u.index, "kind": u.kind, "name": u.name, "method": u.method,
+            "ocr_confidence": u.ocr_confidence, "warnings": u.warnings or [], "text": (u.text or "")[:20000],
+        }
+
+
+@router.get("/{doc_id}/units/{index}/image")
+def get_unit_image(doc_id: uuid.UUID, index: int):
+    if index < 1:
+        raise HTTPException(404, "Page not found")
+    with SessionLocal() as s:
+        d = s.get(Document, doc_id)
+        if not d:
+            raise HTTPException(404, "Document not found")
+        if d.file_type not in ("pdf", "image"):
+            raise HTTPException(404, "This file type has no page images.")
+        path, ftype = d.storage_path, d.file_type
+    try:
+        data, mime = unit_image_bytes(path, ftype, index, dpi=130)
+    except Exception:
+        raise HTTPException(404, "Page image not available.")
+    return Response(content=data, media_type=mime, headers={"Cache-Control": "private, max-age=300"})

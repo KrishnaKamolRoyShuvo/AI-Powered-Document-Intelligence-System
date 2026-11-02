@@ -20,3 +20,4 @@ class InvoiceData(BaseModel):
     currency: str | None = None
     line_items: list[LineItem] = []
     uncertain_fields: list[str] = []
+    assumptions: list[str] = []

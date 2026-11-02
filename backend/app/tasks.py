@@ -80,6 +80,8 @@ def _save_record(s, doc_id, unit, res):
             _issue(rec, "invalid_date", "warning", "invoice_date", f"Could not read the date '{d.invoice_date}'.")
         for field in d.uncertain_fields:
             _issue(rec, "uncertain_field", "warning", field, "The AI was not sure about this value.")
+        for note in d.assumptions:
+            _issue(rec, "assumption", "info", None, note[:300])
         if "low_ocr_confidence" in unit.warnings:
             _issue(rec, "low_ocr_confidence", "warning", None, "OCR quality was low on this page.")
     rec.needs_review = len(rec.issues) > 0

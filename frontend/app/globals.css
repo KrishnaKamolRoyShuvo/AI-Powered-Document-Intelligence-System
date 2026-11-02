@@ -1,0 +1,36 @@
+:root {
+  --bg: #f6f7f9; --card: #fff; --text: #1c2430; --muted: #667085; --line: #e4e7ec;
+  --brand: #2f5bea; --ok: #12805c; --warn: #b54708; --err: #b42318;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); line-height: 1.45; }
+a { color: var(--brand); }
+.nav { display: flex; align-items: center; gap: 2rem; padding: .9rem 1.5rem; background: #101828; color: #fff; }
+.nav nav { display: flex; gap: 1.25rem; }
+.nav a { color: #d0d5dd; text-decoration: none; }
+.nav a:hover { color: #fff; }
+.page { max-width: 1100px; margin: 1.5rem auto; padding: 0 1rem; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: 1rem; }
+h1 { font-size: 1.4rem; margin: 0 0 1rem; }
+h2 { font-size: 1.1rem; margin: 0 0 .75rem; }
+.drop { border: 2px dashed #98a2b3; border-radius: 10px; padding: 1.5rem; text-align: center; color: var(--muted); background: #fcfcfd; }
+.drop.active { border-color: var(--brand); background: #eef3ff; }
+button { background: var(--brand); color: #fff; border: 0; border-radius: 8px; padding: .5rem .9rem; font-size: .95rem; cursor: pointer; }
+button.secondary { background: #fff; color: var(--text); border: 1px solid #d0d5dd; }
+button:disabled { opacity: .55; cursor: not-allowed; }
+table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+th, td { text-align: left; padding: .55rem .6rem; border-bottom: 1px solid var(--line); vertical-align: middle; }
+th { color: var(--muted); font-weight: 600; font-size: .78rem; text-transform: uppercase; letter-spacing: .03em; }
+.badge { display: inline-block; padding: .12rem .55rem; border-radius: 999px; font-size: .78rem; font-weight: 600; }
+.badge.queued { background: #eaecf0; color: #344054; }
+.badge.processing { background: #dbeafe; color: #175cd3; }
+.badge.done { background: #d1fadf; color: #12805c; }
+.badge.needs_review { background: #fef0c7; color: #b54708; }
+.badge.failed { background: #fee4e2; color: #b42318; }
+.bar { height: 8px; background: #eaecf0; border-radius: 99px; overflow: hidden; min-width: 90px; }
+.bar > div { height: 100%; background: var(--brand); transition: width .3s; }
+.muted { color: var(--muted); }
+.row { display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; }
+.ok { color: var(--ok); }
+.err { color: var(--err); }
+select, input { padding: .45rem .6rem; border: 1px solid #d0d5dd; border-radius: 8px; font-size: .95rem; background: #fff; }

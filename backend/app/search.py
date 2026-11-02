@@ -11,6 +11,7 @@ CANDIDATES = 100
 CHUNK = 200
 MIN_SIM = float(os.environ.get("SEMANTIC_MIN_SIM", "0.5"))
 REL_GAP = float(os.environ.get("SEMANTIC_REL_GAP", "0.05"))
+SEM_TOP_K = int(os.environ.get("SEMANTIC_TOP_K", "5"))
 
 
 def _like(text):
@@ -187,6 +188,7 @@ def run_search(s, p):
             if rows:
                 best = float(rows[0][3])
                 rows = [r for r in rows if float(r[3]) >= best - REL_GAP]
+                rows = rows[:SEM_TOP_K]
             for rank, (rec, fn, st, sim) in enumerate(rows):
                 add(rec, fn, st, rank, "semantic", round(float(sim), 3))
         except Exception:
